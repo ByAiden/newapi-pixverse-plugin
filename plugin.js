@@ -781,13 +781,16 @@ export function parseTaskResult(ctx, body) {
   // 500008 not found, 500064 deleted, 500085 another account's task.
   if (code === 500008 || code === 500064 || code === 500085) return { status: "FAILURE", reason: pixverseError(object) };
   if (code !== 0) return { status: "UNKNOWN", reason: pixverseError(object) };
-  const status = videoStatus(object);
+  const data = resp(object) || {};
+  // An upload holds its image id and never changes.
+  if (ctx && ctx.action === ACTION_UPLOAD) return present(data.img_id) ? { status: "SUCCESS", progress: "100%" } : { status: "UNKNOWN", reason: "PixVerse returned no image id" };
+  const status = Number(data.status);
   // PixVerse calls a task done once status is 1 and the URL is set.
   if (status === 1) return videoURL(object) ? { status: "SUCCESS", progress: "100%" } : { status: "IN_PROGRESS" };
   if (status === 5) return { status: "IN_PROGRESS" };
   if (status === 7) return { status: "FAILURE", reason: "PixVerse content moderation failed" };
   if (status === 8) return { status: "FAILURE", reason: "PixVerse generation failed" };
-  return { status: "UNKNOWN", reason: "unrecognized PixVerse status: " + trimmed(resp(object) ? resp(object).status : "") };
+  return { status: "UNKNOWN", reason: "unrecognized PixVerse status: " + trimmed(data.status) };
 }
 
 // A finished task settles on the credits PixVerse reports for it, else on
