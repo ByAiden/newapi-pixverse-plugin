@@ -57,6 +57,27 @@ tier("base", (u("resolution") == "1080p" ? 0.080 : u("resolution") == "720p" ? 0
 
 The image upload is not billable and has no price field.
 
+PixVerse's current list prices, in credits per second (V6 Max, C1, V6) or credits per request (V5.6, V5.5, V5), with the audio switch off and on:
+
+| Model | 360p | 540p | 720p | 1080p |
+| --- | --- | --- | --- | --- |
+| `pixverse-v6-max` | 6 / 9 | 9 / 11 | 11 / 15 | 22 / 28 |
+| `pixverse-c1` | 6 / 8 | 8 / 10 | 10 / 13 | 19 / 24 |
+| `pixverse-v6` | 5 / 7 | 7 / 9 | 9 / 12 | 18 / 23 |
+| `pixverse-v5.6`, 5 s | 35 / 80 | 35 / 80 | 45 / 90 | 75 / 120 |
+| `pixverse-v5.6`, 8 s | 70 / 115 | 70 / 115 | 90 / 135 | 150 / 195 |
+| `pixverse-v5.6`, 10 s | 77 / 122 | 77 / 122 | 99 / 144 | not supported |
+| `pixverse-v5.5`, 5 s | 45 / 55 | 45 / 55 | 60 / 70 | 120 / 130 |
+| `pixverse-v5.5`, 8 s | 90 / 100 | 90 / 100 | 120 / 130 | 240 / 250 |
+| `pixverse-v5.5`, 10 s | 99 / 109 | 99 / 109 | 132 / 142 | not supported |
+| `pixverse-v5.5` multi-clip, 5 s | 75 / 85 | 75 / 85 | 90 / 100 | 150 / 160 |
+| `pixverse-v5.5` multi-clip, 8 s | 120 / 130 | 120 / 130 | 150 / 160 | 270 / 280 |
+| `pixverse-v5.5` multi-clip, 10 s | 129 / 139 | 129 / 139 | 162 / 172 | not supported |
+| `pixverse-v5`, 5 s | 45 | 45 | 60 | 120 |
+| `pixverse-v5`, 8 s | 90 | 90 | 120 | 240 |
+
+The credits of the V6 family are per generated second; the V5 family is a fixed amount per request. Divide by 225 for the US dollar amount, and multiply by `M` for your margin.
+
 ## Example
 
 Upload an image, then use its task id:
