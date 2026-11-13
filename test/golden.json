@@ -1,0 +1,729 @@
+{
+  "cases": [
+    {
+      "name": "text-to-video goes to the PixVerse text endpoint",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "pixverse-v6",
+            "prompt": "a cat",
+            "duration": 8,
+            "quality": "720p",
+            "aspect_ratio": "16:9",
+            "generate_audio_switch": false
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://app-api.pixverse.ai/openapi/v2/video/text/generate",
+        "method": "POST",
+        "headers": {
+          "API-KEY": "test-key",
+          "Ai-trace-id": "cb89d945-ad94-41a2-ad8d-621a870328b6",
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "v6",
+          "prompt": "a cat",
+          "duration": 8,
+          "quality": "720p",
+          "aspect_ratio": "16:9",
+          "generate_audio_switch": false
+        },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "image-to-video resolves the uploaded image id",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "pixverse-c1",
+            "prompt": "move",
+            "duration": 5,
+            "quality": "720p",
+            "generate_audio_switch": false,
+            "img_id": "task_upload"
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "image_to_video",
+          "model": "pixverse-c1",
+          "upstreamModel": "c1",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public",
+          "originTasks": [
+            {
+              "taskId": "task_upload",
+              "upstreamTaskId": "9001",
+              "action": "upload",
+              "status": "SUCCESS",
+              "data": {
+                "ErrCode": 0,
+                "Resp": {
+                  "img_id": 9001
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "url": "https://app-api.pixverse.ai/openapi/v2/video/img/generate",
+        "method": "POST",
+        "headers": {
+          "API-KEY": "test-key",
+          "Ai-trace-id": "cb89d945-ad94-41a2-ad8d-621a870328b6",
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "c1",
+          "prompt": "move",
+          "duration": 5,
+          "quality": "720p",
+          "generate_audio_switch": false,
+          "img_id": 9001
+        },
+        "action": "image_to_video"
+      }
+    },
+    {
+      "name": "the upload goes to the PixVerse upload endpoint",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "pixverse-image-upload",
+            "image": {
+              "ref": "request_file:image",
+              "filename": "a.png",
+              "mimeType": "image/png"
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "upload",
+          "model": "pixverse-image-upload",
+          "upstreamModel": "pixverse-image-upload",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://app-api.pixverse.ai/openapi/v2/image/upload",
+        "method": "POST",
+        "headers": {
+          "API-KEY": "test-key",
+          "Ai-trace-id": "cb89d945-ad94-41a2-ad8d-621a870328b6",
+          "Accept": "application/json"
+        },
+        "bodyType": "multipart",
+        "parts": [
+          {
+            "name": "image",
+            "fileRef": "request_file:image",
+            "filename": "a.png"
+          }
+        ],
+        "action": "upload"
+      }
+    },
+    {
+      "name": "a duration the model does not serve is refused",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "pixverse-v5.6",
+            "prompt": "x",
+            "duration": 6
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "text_to_video",
+          "model": "pixverse-v5.6",
+          "upstreamModel": "pixverse-v5.6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "duration for pixverse-v5.6 must be one of 5, 8, 10"
+    },
+    {
+      "name": "an unknown request field is refused",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "pixverse-v6",
+            "prompt": "x",
+            "temperature": 0.5
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "request.temperature is not supported"
+    },
+    {
+      "name": "a raw PixVerse image id is refused",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "pixverse-v6",
+            "prompt": "x",
+            "img_id": 9001
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "image_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "img_id must be the task id returned by the image upload route"
+    },
+    {
+      "name": "the submit reply keeps the PixVerse task id",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {
+          "requestBody": {
+            "model": "pixverse-v6",
+            "prompt": "a cat",
+            "duration": 8,
+            "quality": "720p",
+            "aspect_ratio": "16:9",
+            "generate_audio_switch": false
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        },
+        {
+          "statusCode": 200,
+          "headers": {},
+          "body": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "video_id": 5001,
+              "credits": 45
+            }
+          }
+        }
+      ],
+      "expected": {
+        "taskId": "5001",
+        "taskData": {
+          "ErrCode": 0,
+          "ErrMsg": "success",
+          "Resp": {
+            "video_id": 5001,
+            "credits": 45
+          }
+        },
+        "state": {
+          "credits": 45
+        }
+      }
+    },
+    {
+      "name": "a vendor error fails the submission",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {
+          "requestBody": {
+            "model": "pixverse-v6",
+            "prompt": "a cat",
+            "duration": 8,
+            "quality": "720p",
+            "aspect_ratio": "16:9",
+            "generate_audio_switch": false
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        },
+        {
+          "statusCode": 200,
+          "headers": {},
+          "body": {
+            "ErrCode": 400017,
+            "ErrMsg": "Invalid parameter",
+            "Resp": null
+          }
+        }
+      ],
+      "expectedError": "PixVerse error 400017"
+    },
+    {
+      "name": "a finished video succeeds",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "5001",
+          "publicTaskId": "task_public",
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "data": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "id": 5001,
+              "status": 1,
+              "url": "https://media.example/v5001.mp4",
+              "credits": 40
+            }
+          },
+          "state": null
+        },
+        {
+          "ErrCode": 0,
+          "ErrMsg": "success",
+          "Resp": {
+            "id": 5001,
+            "status": 1,
+            "url": "https://media.example/v5001.mp4",
+            "credits": 40
+          }
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "SUCCESS",
+        "progress": "100%"
+      }
+    },
+    {
+      "name": "a running video stays in progress",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "5001",
+          "publicTaskId": "task_public",
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "data": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "id": 5001,
+              "status": 1,
+              "url": "https://media.example/v5001.mp4",
+              "credits": 40
+            }
+          },
+          "state": null
+        },
+        {
+          "ErrCode": 0,
+          "ErrMsg": "success",
+          "Resp": {
+            "id": 5001,
+            "status": 5,
+            "url": ""
+          }
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "IN_PROGRESS"
+      }
+    },
+    {
+      "name": "a moderation failure fails the task",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "5001",
+          "publicTaskId": "task_public",
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "data": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "id": 5001,
+              "status": 1,
+              "url": "https://media.example/v5001.mp4",
+              "credits": 40
+            }
+          },
+          "state": null
+        },
+        {
+          "ErrCode": 0,
+          "ErrMsg": "success",
+          "Resp": {
+            "id": 5001,
+            "status": 7
+          }
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "FAILURE",
+        "reason": "PixVerse content moderation failed"
+      }
+    },
+    {
+      "name": "an unknown state is UNKNOWN",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "5001",
+          "publicTaskId": "task_public",
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "data": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "id": 5001,
+              "status": 1,
+              "url": "https://media.example/v5001.mp4",
+              "credits": 40
+            }
+          },
+          "state": null
+        },
+        {
+          "ErrCode": 0,
+          "ErrMsg": "success",
+          "Resp": {
+            "id": 5001,
+            "status": 42
+          }
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "UNKNOWN",
+        "reason": "unrecognized PixVerse status: 42"
+      }
+    },
+    {
+      "name": "the reservation follows the published credits",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "requestBody": {
+            "model": "pixverse-v6",
+            "prompt": "a cat",
+            "duration": 8,
+            "quality": "720p",
+            "aspect_ratio": "16:9",
+            "generate_audio_switch": false
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "credits": 72,
+        "seconds": 8,
+        "resolution": "720p",
+        "audio": false,
+        "multi_clip": false
+      }
+    },
+    {
+      "name": "a finished task settles on the reported credits",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "taskId": "5001",
+          "publicTaskId": "task_public",
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "data": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "id": 5001,
+              "status": 1,
+              "url": "https://media.example/v5001.mp4",
+              "credits": 40
+            }
+          },
+          "state": null
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "ErrCode": 0,
+          "ErrMsg": "success",
+          "Resp": {
+            "id": 5001,
+            "status": 1,
+            "url": "https://media.example/v5001.mp4",
+            "credits": 40
+          }
+        }
+      ],
+      "expected": {
+        "credits": 40
+      }
+    },
+    {
+      "name": "a task without reported credits keeps its reservation",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "taskId": "5001",
+          "publicTaskId": "task_public",
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "baseUrl": "https://app-api.pixverse.ai",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "data": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "id": 5001,
+              "status": 1,
+              "url": "https://media.example/v5001.mp4",
+              "credits": 40
+            }
+          },
+          "state": null
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "ErrCode": 0,
+          "Resp": {
+            "id": 5001,
+            "status": 1,
+            "url": "https://media.example/v.mp4"
+          }
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "the finished video is the only artifact",
+      "hook": "listArtifacts",
+      "args": [
+        {
+          "task_id": "task_public",
+          "status": "SUCCESS",
+          "action": "text_to_video",
+          "data": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "id": 5001,
+              "status": 1,
+              "url": "https://media.example/v5001.mp4",
+              "credits": 40
+            }
+          }
+        }
+      ],
+      "expected": [
+        {
+          "key": "video",
+          "type": "video",
+          "mimeType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "name": "a failed task has no artifact",
+      "hook": "listArtifacts",
+      "args": [
+        {
+          "task_id": "task_public",
+          "status": "FAILURE",
+          "action": "text_to_video",
+          "data": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "id": 5001,
+              "status": 1,
+              "url": "https://media.example/v5001.mp4",
+              "credits": 40
+            }
+          }
+        }
+      ],
+      "expected": []
+    }
+  ]
+}
