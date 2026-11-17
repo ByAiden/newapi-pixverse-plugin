@@ -102,6 +102,16 @@ curl https://your-gateway.example.com/v1/videos \
   -d '{"model": "pixverse-c1", "prompt": "The character turns into a robot", "seconds": "5", "first_frame_img": "task_upload_id", "last_frame_img": "task_other_upload_id"}'
 ```
 
+## Through another New API gateway
+
+Use this when your public gateway forwards PixVerse requests to a second New API gateway that holds the PixVerse key.
+
+- Install this plugin, same version, on both gateways. On the second gateway set up the channel as described above.
+- On the public gateway create a New API (60) channel: Base URL is the second gateway's address, the key is one of its tokens, and pick this plugin under 上游任务插件 (upstream task plugins). List the same model names.
+- Set prices on the public gateway with the same expressions as above: the request reserves the same facts, and a finished task settles on the PixVerse credits the second gateway passes on. The second gateway charges its own prices to the token.
+- Upload images on the public gateway and reference them by its task ids; the plugin swaps in the second gateway's ids.
+- Video downloads go through the second gateway's `/v1/tasks/{id}/artifacts/video/content` with the token.
+
 ## Limits
 
 - `pixverse-v6-max` and `pixverse-c1` make 1 to 15 seconds, `pixverse-v6` 1 to 15 seconds, `pixverse-v5.6` and `pixverse-v5.5` 5, 8 or 10 seconds, and `pixverse-v5` 5 or 8 seconds.

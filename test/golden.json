@@ -724,6 +724,313 @@
         }
       ],
       "expected": []
+    },
+    {
+      "name": "New API: text-to-video goes to the gateway route with its token",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestHeaders": {},
+          "baseUrl": "https://middle.example.com",
+          "apiKey": "sk-middle",
+          "authHeader": "Bearer sk-middle",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_outer",
+          "requestBody": {
+            "model": "pixverse-v6",
+            "prompt": "a cat",
+            "duration": 5,
+            "quality": "720p",
+            "aspect_ratio": "16:9"
+          },
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6"
+        }
+      ],
+      "expected": {
+        "url": "https://middle.example.com/byaiden_pixverse/openapi/v2/video/text/generate",
+        "method": "POST",
+        "headers": {
+          "Authorization": "Bearer sk-middle",
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "pixverse-v6",
+          "prompt": "a cat",
+          "duration": 5,
+          "quality": "720p",
+          "aspect_ratio": "16:9",
+          "generate_audio_switch": false
+        },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "New API: an uploaded image is referenced by the gateway task id",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestHeaders": {},
+          "baseUrl": "https://middle.example.com",
+          "apiKey": "sk-middle",
+          "authHeader": "Bearer sk-middle",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_outer",
+          "requestBody": {
+            "model": "pixverse-v6",
+            "prompt": "go",
+            "duration": 5,
+            "quality": "720p",
+            "img_id": "task_outer_img"
+          },
+          "action": "image_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6",
+          "originTasks": [
+            {
+              "taskId": "task_outer_img",
+              "upstreamTaskId": "task_middle_img",
+              "action": "upload",
+              "data": {
+                "ErrCode": 0,
+                "Resp": {
+                  "img_id": "task_middle_img"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "url": "https://middle.example.com/byaiden_pixverse/openapi/v2/video/img/generate",
+        "method": "POST",
+        "headers": {
+          "Authorization": "Bearer sk-middle",
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "pixverse-v6",
+          "prompt": "go",
+          "duration": 5,
+          "quality": "720p",
+          "generate_audio_switch": false,
+          "img_id": "task_middle_img"
+        },
+        "action": "image_to_video"
+      }
+    },
+    {
+      "name": "New API: the gateway submit reply keeps its task id and credits",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {
+          "requestHeaders": {},
+          "baseUrl": "https://middle.example.com",
+          "apiKey": "sk-middle",
+          "authHeader": "Bearer sk-middle",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_outer",
+          "requestBody": {
+            "model": "pixverse-v6",
+            "prompt": "a cat",
+            "duration": 5,
+            "quality": "720p",
+            "aspect_ratio": "16:9"
+          },
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6"
+        },
+        {
+          "status": 200,
+          "headers": {},
+          "body": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "video_id": "task_middle",
+              "credits": 45
+            }
+          }
+        }
+      ],
+      "expected": {
+        "taskId": "task_middle",
+        "taskData": {
+          "ErrCode": 0,
+          "ErrMsg": "success",
+          "Resp": {
+            "video_id": "task_middle",
+            "credits": 45
+          }
+        },
+        "state": {
+          "credits": 45
+        }
+      }
+    },
+    {
+      "name": "New API: polling uses the gateway native query route",
+      "hook": "buildQueryRequest",
+      "args": [
+        {
+          "taskId": "task_middle",
+          "publicTaskId": "task_outer",
+          "baseUrl": "https://middle.example.com",
+          "apiKey": "sk-middle",
+          "authHeader": "Bearer sk-middle",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "data": null,
+          "state": null,
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6"
+        }
+      ],
+      "expected": {
+        "url": "https://middle.example.com/byaiden_pixverse/openapi/v2/video/result/task_middle",
+        "method": "GET",
+        "headers": {
+          "Authorization": "Bearer sk-middle",
+          "Accept": "application/json"
+        }
+      }
+    },
+    {
+      "name": "New API: the gateway result presenter succeeds",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "task_middle",
+          "publicTaskId": "task_outer",
+          "baseUrl": "https://middle.example.com",
+          "apiKey": "sk-middle",
+          "authHeader": "Bearer sk-middle",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "data": null,
+          "state": null,
+          "action": "text_to_video",
+          "model": "pixverse-v6",
+          "upstreamModel": "pixverse-v6"
+        },
+        {
+          "ErrCode": 0,
+          "ErrMsg": "success",
+          "Resp": {
+            "id": "task_middle",
+            "status": 1,
+            "credits": 40,
+            "url": "https://middle.example.com/v1/tasks/task_middle/artifacts/video/content?access=sig"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "SUCCESS",
+        "progress": "100%"
+      }
+    },
+    {
+      "name": "New API: settlement reads the credits the gateway passes on",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "taskId": "task_middle",
+          "publicTaskId": "task_outer",
+          "baseUrl": "https://middle.example.com",
+          "apiKey": "sk-middle",
+          "authHeader": "Bearer sk-middle",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "data": null,
+          "state": null,
+          "action": "text_to_video"
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "ErrCode": 0,
+          "ErrMsg": "success",
+          "Resp": {
+            "id": "task_middle",
+            "status": 1,
+            "credits": 40,
+            "url": "https://middle.example.com/v1/tasks/task_middle/artifacts/video/content?access=sig"
+          }
+        }
+      ],
+      "expected": {
+        "credits": 40
+      }
+    },
+    {
+      "name": "New API: downloads use the gateway task content route",
+      "hook": "buildContentRequest",
+      "args": [
+        {
+          "taskId": "task_middle",
+          "publicTaskId": "task_outer",
+          "baseUrl": "https://middle.example.com",
+          "apiKey": "sk-middle",
+          "authHeader": "Bearer sk-middle",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "data": {
+            "ErrCode": 0,
+            "ErrMsg": "success",
+            "Resp": {
+              "id": "task_middle",
+              "status": 1,
+              "credits": 40,
+              "url": "https://middle.example.com/v1/tasks/task_middle/artifacts/video/content?access=sig"
+            }
+          },
+          "state": null,
+          "upstreamTaskId": "task_middle",
+          "clientRequest": {
+            "method": "GET",
+            "headers": {}
+          },
+          "action": "text_to_video",
+          "artifactKey": "video"
+        }
+      ],
+      "expected": {
+        "url": "https://middle.example.com/v1/tasks/task_middle/artifacts/video/content",
+        "method": "GET",
+        "headers": {
+          "Authorization": "Bearer sk-middle"
+        }
+      }
     }
   ]
 }

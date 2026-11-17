@@ -101,6 +101,16 @@ curl https://your-gateway.example.com/v1/videos \
   -d '{"model": "pixverse-c1", "prompt": "The character turns into a robot", "seconds": "5", "first_frame_img": "task_upload_id", "last_frame_img": "task_other_upload_id"}'
 ```
 
+## 经由另一个 New API 网关
+
+适用于对外网关把 PixVerse 请求转发给另一台持有 PixVerse 密钥的 New API 网关的情况。
+
+- 两台网关都安装本插件的同一版本，第二台网关按上文设置渠道。
+- 在对外网关新建 New API（60）渠道：Base URL 填第二台网关地址，密钥填它的一个令牌，在「上游任务插件」中选择本插件，模型名与第二台网关一致。
+- 在对外网关用上文相同的表达式定价：提交时预留相同的计费参数，任务完成后按第二台网关转来的 PixVerse 积分结算。第二台网关按它自己的价格向该令牌计费。
+- 在对外网关上传图片并用它的任务 id 引用，插件会换成第二台网关的 id。
+- 视频下载经第二台网关的 `/v1/tasks/{id}/artifacts/video/content`，带该令牌。
+
 ## 限制
 
 - `pixverse-v6-max` 与 `pixverse-c1` 可生成 1 到 15 秒，`pixverse-v6` 1 到 15 秒，`pixverse-v5.6` 与 `pixverse-v5.5` 为 5、8 或 10 秒，`pixverse-v5` 为 5 或 8 秒。

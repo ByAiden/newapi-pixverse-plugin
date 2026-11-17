@@ -72,7 +72,7 @@ test("meta is a plain JSON literal equal to the exported meta", () => {
 
 test("meta follows the marketplace naming rules", () => {
   assert.match(plugin.meta.key, /^[a-z0-9_]{1,30}$/);
-  assert.equal(plugin.meta.version, "1.0.0");
+  assert.match(plugin.meta.version, /^\d+\.\d+\.\d+$/);
   assert.equal(plugin.meta.apiVersion, 1);
   assert.ok(plugin.meta.author.name);
   assert.ok(plugin.meta.website.startsWith("https://"));

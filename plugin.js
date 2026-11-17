@@ -5,6 +5,7 @@
 // GET /openapi/v2/video/result/{video_id}. Generation endpoints take only
 // PixVerse image ids, so images are first uploaded through the plugin's
 // upload route, whose gateway task id later requests reference.
+const PLUGIN_KEY = "byaiden_pixverse";
 const VIDEO_MODELS = ["pixverse-v6-max", "pixverse-c1", "pixverse-v6", "pixverse-v5.6", "pixverse-v5.5", "pixverse-v5"];
 const UPLOAD_MODEL = "pixverse-image-upload";
 const MODEL_PREFIX = "pixverse-";
@@ -106,13 +107,17 @@ export const meta = {
     "en": "PixVerse video generation (V6 Max, C1, V6, V5.6, V5.5, V5): text-to-video, image-to-video and first/last frame transitions, with image upload",
     "zh": "PixVerse 视频生成（V6 Max、C1、V6、V5.6、V5.5、V5）：文生视频、图生视频与首尾帧过渡，含图片上传"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "ByAiden",
     "url": "https://github.com/ByAiden"
   },
   "website": "https://docs.platform.pixverse.ai/",
   "baseUrl": "https://app-api.pixverse.ai",
+  "upstreams": [
+    "vendor",
+    "new_api"
+  ],
   "models": [
     "pixverse-v6-max",
     "pixverse-c1",
@@ -602,8 +607,31 @@ function traceId(seed) {
   return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-4" + hex.slice(13, 16) + "-" + variant + hex.slice(17, 20) + "-" + hex.slice(20, 32);
 }
 
+// On a New API channel the same plugin answers on another gateway, which
+// serves PixVerse's paths under the plugin key and takes its own token as a
+// Bearer header.
+function viaGateway(ctx) {
+  return Boolean(ctx && ctx.upstream && ctx.upstream.kind === "new_api");
+}
+
+function apiRoot(ctx) {
+  return ctx.baseUrl + (viaGateway(ctx) ? "/" + PLUGIN_KEY : "");
+}
+
+function gatewayAuth(ctx) {
+  return trimmed(ctx.authHeader) || "Bearer " + (ctx.apiKey || "");
+}
+
 function vendorHeaders(ctx, trace) {
+  if (viaGateway(ctx)) return { Authorization: gatewayAuth(ctx), Accept: "application/json" };
   return { "API-KEY": ctx.apiKey || "", "Ai-trace-id": trace, Accept: "application/json" };
+}
+
+// The upstream gateway's public task id: what its presenters return in place
+// of PixVerse's numeric ids.
+function gatewayTaskId(value) {
+  const id = typeof value === "number" && Number.isInteger(value) && value > 0 ? String(value) : typeof value === "string" ? value.trim() : "";
+  return /^[A-Za-z0-9_.:-]{1,128}$/.test(id) ? id : "";
 }
 
 function pixverseError(body) {
@@ -618,12 +646,18 @@ function resp(body) {
   return object ? plainObject(object.Resp) : null;
 }
 
-// The PixVerse image id of a referenced upload task.
-function uploadedImageId(ref, originTasks) {
+// The PixVerse image id of a referenced upload task; through another gateway,
+// the task id that gateway gave the upload.
+function uploadedImageId(ref, originTasks, gateway) {
   for (const task of originTasks || []) {
     if (!task || task.taskId !== ref) continue;
     if (task.action !== ACTION_UPLOAD) throw new Error(ref + " is not an image upload task");
     const data = resp(task.data);
+    if (gateway) {
+      const upstream = gatewayTaskId(trimmed(task.upstreamTaskId)) || gatewayTaskId(data && data.img_id);
+      if (!upstream) throw new Error("image " + ref + " is not available");
+      return upstream;
+    }
     const id = data && present(data.img_id) ? data.img_id : trimmed(task.upstreamTaskId);
     const number = Number(id);
     if (!Number.isInteger(number) || number < 1) throw new Error("image " + ref + " is not available");
@@ -730,16 +764,18 @@ export function buildSubmitRequest(ctx) {
     const parts = [];
     if (plainObject(request.image)) parts.push({ name: "image", fileRef: request.image.ref, filename: request.image.filename });
     else parts.push({ name: "image_url", value: imageURL(request.image_url) });
-    return { url: ctx.baseUrl + PATH_UPLOAD, method: "POST", headers: vendorHeaders(ctx, traceId(ctx.publicTaskId)), bodyType: "multipart", parts: parts, action: action };
+    return { url: apiRoot(ctx) + PATH_UPLOAD, method: "POST", headers: vendorHeaders(ctx, traceId(ctx.publicTaskId)), bodyType: "multipart", parts: parts, action: action };
   }
   const vendor = vendorModel(ctx);
+  const gateway = viaGateway(ctx);
   const body = videoRequest(withoutModel(ctx.requestBody), action, vendor);
-  for (const field of IMAGE_FIELDS[action] || []) body[field] = uploadedImageId(body[field], ctx.originTasks);
-  const out = Object.assign({ model: vendor }, body);
+  for (const field of IMAGE_FIELDS[action] || []) body[field] = uploadedImageId(body[field], ctx.originTasks, gateway);
+  // The upstream gateway takes the plugin's public model name.
+  const out = Object.assign({ model: gateway ? MODEL_PREFIX + vendor : vendor }, body);
   const path = action === ACTION_IMAGE ? PATH_IMAGE : action === ACTION_TRANSITION ? PATH_TRANSITION : PATH_TEXT;
   const headers = vendorHeaders(ctx, traceId(ctx.publicTaskId));
   headers["Content-Type"] = "application/json";
-  return { url: ctx.baseUrl + path, method: "POST", headers: headers, body: out, action: action };
+  return { url: apiRoot(ctx) + path, method: "POST", headers: headers, body: out, action: action };
 }
 
 // PixVerse answers HTTP 200 with a nonzero ErrCode when it refuses a request;
@@ -748,6 +784,7 @@ export function parseSubmitResponse(ctx, response) {
   const body = plainObject(response.body);
   if (!body || Number(body.ErrCode) !== 0) throw new Error(pixverseError(body));
   const data = resp(body) || {};
+  if (viaGateway(ctx)) return gatewaySubmitResult(ctx, body, data);
   if (requestAction(ctx) === ACTION_UPLOAD) {
     const id = Number(data.img_id);
     if (!Number.isInteger(id) || id < 1) throw new Error("PixVerse did not return an image id");
@@ -756,6 +793,21 @@ export function parseSubmitResponse(ctx, response) {
   const id = Number(data.video_id);
   if (!Number.isInteger(id) || id < 1) throw new Error("PixVerse did not return a video id");
   const result = { taskId: String(id), taskData: body };
+  if (Number(data.credits) > 0) result.state = { credits: Number(data.credits) };
+  return result;
+}
+
+// The upstream gateway's presenters answer in PixVerse's envelope with its own
+// task id in img_id / video_id, and keep the credits PixVerse charged.
+function gatewaySubmitResult(ctx, body, data) {
+  if (requestAction(ctx) === ACTION_UPLOAD) {
+    const id = gatewayTaskId(data.img_id);
+    if (!id) throw new Error("the upstream gateway did not return an image task id");
+    return { taskId: id, taskData: body, immediate: { status: "SUCCESS", progress: "100%" } };
+  }
+  const id = gatewayTaskId(data.video_id);
+  if (!id) throw new Error("the upstream gateway did not return a video task id");
+  const result = { taskId: id, taskData: body };
   if (Number(data.credits) > 0) result.state = { credits: Number(data.credits) };
   return result;
 }
@@ -770,7 +822,7 @@ export function extractUsage(ctx) {
 }
 
 export function buildQueryRequest(ctx) {
-  return { url: ctx.baseUrl + PATH_RESULT + encodeURIComponent(ctx.taskId), method: "GET", headers: vendorHeaders(ctx, traceId("")) };
+  return { url: apiRoot(ctx) + PATH_RESULT + encodeURIComponent(ctx.taskId), method: "GET", headers: vendorHeaders(ctx, traceId("")) };
 }
 
 // status 1 done, 5 generating, 7 moderation failed, 8 generation failed.
@@ -780,16 +832,20 @@ export function parseTaskResult(ctx, body) {
   const code = Number(object.ErrCode);
   // 500008 not found, 500064 deleted, 500085 another account's task.
   if (code === 500008 || code === 500064 || code === 500085) return { status: "FAILURE", reason: pixverseError(object) };
+  // The upstream gateway answers 404 for a task it does not have.
+  if (viaGateway(ctx) && code === 404) return { status: "FAILURE", reason: pixverseError(object) };
   if (code !== 0) return { status: "UNKNOWN", reason: pixverseError(object) };
   const data = resp(object) || {};
+  // The upstream gateway puts its failure reason in ErrMsg.
+  const upstreamReason = viaGateway(ctx) && trimmed(object.ErrMsg) && trimmed(object.ErrMsg) !== "success" ? trimmed(object.ErrMsg) : "";
   // An upload holds its image id and never changes.
   if (ctx && ctx.action === ACTION_UPLOAD) return present(data.img_id) ? { status: "SUCCESS", progress: "100%" } : { status: "UNKNOWN", reason: "PixVerse returned no image id" };
   const status = Number(data.status);
   // PixVerse calls a task done once status is 1 and the URL is set.
   if (status === 1) return videoURL(object) ? { status: "SUCCESS", progress: "100%" } : { status: "IN_PROGRESS" };
   if (status === 5) return { status: "IN_PROGRESS" };
-  if (status === 7) return { status: "FAILURE", reason: "PixVerse content moderation failed" };
-  if (status === 8) return { status: "FAILURE", reason: "PixVerse generation failed" };
+  if (status === 7) return { status: "FAILURE", reason: upstreamReason || "PixVerse content moderation failed" };
+  if (status === 8) return { status: "FAILURE", reason: upstreamReason || "PixVerse generation failed" };
   return { status: "UNKNOWN", reason: "unrecognized PixVerse status: " + trimmed(data.status) };
 }
 
@@ -812,9 +868,19 @@ export function listArtifacts(task) {
 }
 
 // Downloads ask PixVerse for the current URL first and fall back to the URL
-// from the last poll.
+// from the last poll. Through another gateway the video comes from that
+// gateway's task content route, with its token.
 export function buildContentRequest(ctx) {
   if (ctx.artifactKey !== "video") throw new Error("artifact_not_found");
+  if (viaGateway(ctx)) {
+    const id = gatewayTaskId(ctx.upstreamTaskId);
+    if (!id) throw new Error("artifact_not_found");
+    return {
+      url: ctx.baseUrl + "/v1/tasks/" + encodeURIComponent(id) + "/artifacts/video/content",
+      method: ctx.clientRequest.method,
+      headers: { Authorization: gatewayAuth(ctx) },
+    };
+  }
   let url = "";
   if (trimmed(ctx.upstreamTaskId)) {
     try {
