@@ -46,13 +46,13 @@ PixVerse prices its API in credits, and 225 credits are worth USD 1. The plugin 
 PixVerse bills V6 Max, C1 and V6 per generated second, and V5.6, V5.5 and V5 per request. One expression covers all of them, because the credits already carry the model's own rate:
 
 ```
-tier("base", u("credits") / 225 * M)
+tier("base", u("credits") * 0.0044444444444)
 ```
 
-`M` is the margin: `1` charges PixVerse's list price. To charge a fixed price per second instead, use the seconds and the quality:
+`0.0044444444444` is the price of one credit, USD 1 / 225 rounded to 13 decimal places: it charges PixVerse's list price, less than USD 0.000000001 below it per 10,000 credits. To add a margin, multiply that number (for example `0.0053333333333` for 1.2 times the list price) rather than appending a factor: with one number per field the gateway's model page shows the expression as a price table. To charge a fixed price per second instead, use the seconds and the quality, again multiplying each number by your margin:
 
 ```
-tier("base", (u("resolution") == "1080p" ? 0.080 : u("resolution") == "720p" ? 0.040 : u("resolution") == "540p" ? 0.031 : 0.022) * u("seconds") * M)
+u("resolution") == "1080p" ? tier("1080p", u("seconds") * 0.08) : u("resolution") == "720p" ? tier("720p", u("seconds") * 0.04) : u("resolution") == "540p" ? tier("540p", u("seconds") * 0.031) : tier("360p", u("seconds") * 0.022)
 ```
 
 The image upload is not billable and has no price field.
@@ -76,7 +76,7 @@ PixVerse's current list prices, in credits per second (V6 Max, C1, V6) or credit
 | `pixverse-v5`, 5 s | 45 | 45 | 60 | 120 |
 | `pixverse-v5`, 8 s | 90 | 90 | 120 | 240 |
 
-The credits of the V6 family are per generated second; the V5 family is a fixed amount per request. Divide by 225 for the US dollar amount, and multiply by `M` for your margin.
+The credits of the V6 family are per generated second; the V5 family is a fixed amount per request. Divide by 225 for the US dollar amount; the expression above does this with its price per credit.
 
 ## Example
 

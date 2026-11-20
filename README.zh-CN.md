@@ -12,7 +12,7 @@ locale: zh-CN
 ## 渠道设置
 
 - 安装插件后，新建一个「任务插件」类型的渠道，绑定 `byaiden_pixverse`。
-- 密钥填 [PixVerse API Platform](https://platform.pixverse.ai) 创建的 API Key。PixVerse 的 API 积分与 PixVerse 网页版订阅分开计费，请在平台的 Billing 页面购买。
+- 密钥填 [PixVerse API Platform](https://platform.pixverse.ai) 创建的 API Key。PixVerse 的 API 积分与 PixVerse 网页版分开计费，请在平台的 Billing 页面购买。
 - API 地址是 `https://app-api.pixverse.ai`。插件把密钥放在 `API-KEY` 请求头里，并为每次请求生成新的 `Ai-trace-id`。
 - 把要提供的模型加到渠道里；也可以通过模型映射用别的名字提供。
 
@@ -45,13 +45,13 @@ PixVerse 的 API 以积分计费，225 积分等于 1 美元。插件只上报�
 PixVerse 对 V6 Max、C1、V6 按生成秒数计费，对 V5.6、V5.5、V5 按次计费。积分本身已经包含模型的费率，所以一个表达式即可覆盖全部模型：
 
 ```
-tier("base", u("credits") / 225 * M)
+tier("base", u("credits") * 0.0044444444444)
 ```
 
-`M` 是利润率，`1` 表示按 PixVerse 的官方价格收费。如果想改成按秒固定计价，可用秒数与清晰度：
+`0.0044444444444` 是每积分的价格，即 1/225 美元四舍五入到小数点后 13 位：按 PixVerse 官方价格收费，每 10,000 积分少收不到 0.000000001 美元。加价时直接把这个数字乘以倍率（例如 1.2 倍为 `0.0053333333333`），不要在末尾追加系数：每个字段只有一个数字，模型广场才会把表达式显示成价格表。如果想改成按秒固定计价，可用秒数与清晰度，同样把每个数字乘以倍率：
 
 ```
-tier("base", (u("resolution") == "1080p" ? 0.080 : u("resolution") == "720p" ? 0.040 : u("resolution") == "540p" ? 0.031 : 0.022) * u("seconds") * M)
+u("resolution") == "1080p" ? tier("1080p", u("seconds") * 0.08) : u("resolution") == "720p" ? tier("720p", u("seconds") * 0.04) : u("resolution") == "540p" ? tier("540p", u("seconds") * 0.031) : tier("360p", u("seconds") * 0.022)
 ```
 
 图片上传不计费，没有价格字段。
@@ -75,7 +75,7 @@ PixVerse 当前的官方价格，按生成秒数计费的模型（V6 Max、C1、
 | `pixverse-v5`，5 秒 | 45 | 45 | 60 | 120 |
 | `pixverse-v5`，8 秒 | 90 | 90 | 120 | 240 |
 
-V6 系列的积分按生成秒数计费，V5 系列按次固定计费。除以 225 得到美元金额，再乘以 `M` 即为你的利润率。
+V6 系列的积分按生成秒数计费，V5 系列按次固定计费。除以 225 得到美元金额；上面的表达式用每积分价格完成这一步。
 
 ## 示例
 

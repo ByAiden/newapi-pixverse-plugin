@@ -107,7 +107,7 @@ export const meta = {
     "en": "PixVerse video generation (V6 Max, C1, V6, V5.6, V5.5, V5): text-to-video, image-to-video and first/last frame transitions, with image upload",
     "zh": "PixVerse 视频生成（V6 Max、C1、V6、V5.6、V5.5、V5）：文生视频、图生视频与首尾帧过渡，含图片上传"
   },
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": {
     "name": "ByAiden",
     "url": "https://github.com/ByAiden"

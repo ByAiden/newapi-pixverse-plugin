@@ -1,7 +1,7 @@
 ---
 changelogVersion: 1
 plugin: byaiden_pixverse
-version: 1.1.0
+version: "1.1.1"
 locale: "en"
 translations:
   zh-CN: CHANGELOG.zh-CN.md
@@ -9,8 +9,8 @@ translations:
 
 # Changelog
 
-## [1.1.0]
+## [1.1.1]
 
-### Added
+### Fixed
 
-- Use this plugin on a New API channel (type 60) whose upstream is another New API gateway with the same plugin installed: requests go to that gateway's `/{key}/openapi/v2/...` routes with its token as a Bearer header, uploaded images are referenced by that gateway's task ids, downloads come from its task content route, and tasks settle on the PixVerse credits that gateway passes on.
+- The README price expressions now display as a price table on the gateway's model page: the credit expression is `u("credits") * 0.0044444444444` (USD 1 / 225 per credit, less than USD 0.000000001 below the list price per 10,000 credits) instead of `u("credits") / 225 * M`, and the per-second expression is a chain with one tier per quality instead of a nested condition. The README now says to multiply each number by the margin.
